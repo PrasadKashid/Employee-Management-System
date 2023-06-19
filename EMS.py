@@ -99,26 +99,46 @@ def addUser():
         con = MongoClient("mongodb://localhost:27017")
         db = con["emspro"]
         coll = db["emp"]
-        id = int(aw_ent_id.get())
-        name = (aw_ent_name.get())
-        salary = float(aw_ent_salary.get())
-        if (id > 0):
-            if ((name.isalpha()) and (len(name) >= 2)):
+        id = aw_ent_id.get()
+        name = aw_ent_name.get()
+        salary = aw_ent_salary.get()
+
+        if not id:
+            showerror("Error", "ID cannot be empty")
+            return
+        try:
+            id = int(id)
+        except ValueError:
+            showerror("Error", "Please enter valid ID")
+            return
+
+        if not salary.strip():
+            showerror("Error", "Salary cannot be empty")
+            return
+        try:
+            salary = float(salary)
+        except ValueError:
+            showerror("Error", "Salary must be a valid float")
+            return
+
+        if id > 0:
+            if name.isalpha() and len(name) >= 2:
                 count = coll.count_documents({"_id": id})
-                if (salary >= 8000):
+                if salary >= 8000:
                     if count == 1:
-                        showinfo(id, "already exists")
+                        showinfo("Already Exists",
+                                 f"User with ID {id} already exists")
                     else:
                         info = {"_id": id, "name": name, "salary": salary}
                         coll.insert_one(info)
-                        showinfo("success", "record created")
+                        showinfo("Success", "Record created")
                 else:
-                    showerror("Error", "salary should be more than 8K")
+                    showerror("Failure", "Salary should be more than 8K")
             else:
                 showerror(
-                    "Error", "Enter Valid Name,Name should of more than 2 Aplhas")
+                    "Error", "Enter a valid name (at least 2 alphabetical characters)")
         else:
-            showerror("Error", "Enter postive ID")
+            showerror("Error", "Enter a positive ID")
     except Exception as e:
         showerror("Error", e)
     finally:
@@ -136,15 +156,21 @@ def deleteUser():
         con = MongoClient("mongodb://localhost:27017")
         db = con["emspro"]
         coll = db["emp"]
-        id = int(dw_ent_id.get())
+        id = dw_ent_id.get().strip()
+
+        if not id:
+            showerror("Error", "ID cannot be empty")
+            return
+
+        id = int(id)
         count = coll.count_documents({"_id": id})
         if count == 1:
             coll.delete_one({"_id": id})
-            showinfo(id, "Deleted")
+            showinfo(id, f"ID: {id} Deleted Successfully")
         elif count == 0:
-            showinfo(id, "Does Not Exists")
+            showerror("Error", "Does Not Exist")
         else:
-            showinfo(id, "Already Exists")
+            showerror("Error", "Already Exists")
     except Exception as e:
         showerror("Error", e)
     finally:
@@ -160,24 +186,40 @@ def updateUser():
         con = MongoClient("mongodb://localhost:27017")
         db = con["emspro"]
         coll = db["emp"]
-        id = int(uw_ent_id.get())
+        id = uw_ent_id.get()
+        if not id:
+            showerror("Error", "ID cannot be empty")
+            return
+        id = int(id)
+
         count = coll.count_documents({"_id": id})
         if count == 1:
             info = {}
             name = (uw_ent_name.get())
-            salary = float(uw_ent_salary.get())
+            salary = uw_ent_salary.get()
+
+            if not salary:
+                showerror("Error", "Salary Field is Empty")
+                return
+            try:
+                salary = float(salary)
+            except ValueError:
+                showerror(
+                    "Error", "Salary must be a valid integer (No Characters are allowed)")
+                return
+
             if ((name.isalpha()) and (len(name) >= 2)):
                 if (salary > 8000):
                     info["name"] = name
                     info["salary"] = salary
                     ndata = {"$set": info}
                     coll.update_one({"_id": id}, ndata)
-                    showinfo(id, "updated")
+                    showinfo("Success", f"ID:{id} updated successfully")
                 else:
                     showerror("Error", "salary should be more than 8K")
             else:
                 showerror(
-                    "Error", "Enter Valid Name,Name should of more than 2 Aplhas")
+                    "Error", "Enter a valid name (at least 2 alphabetical characters")
         else:
             showinfo("id", "does not exists")
     except Exception as e:
@@ -198,6 +240,10 @@ def openChart():
         db = con["emspro"]
         coll = db["emp"]
         graph = list(coll.find().sort("salary", -1).limit(5))
+        if len(graph) == 0:
+            showerror("Empty Database",
+                      "The database is empty. No data to display.")
+            return
         df_mango = pd.DataFrame(graph)
         df_mango.plot(kind="bar", x="name", y="salary", color="DarkMagenta")
         plt.xlabel("Employee")
